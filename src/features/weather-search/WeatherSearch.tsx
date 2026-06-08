@@ -4,13 +4,16 @@ import classes from "./WeatherSearch.module.css";
 import { getWeatherResponse } from "../../entities/weather/weatherApi";
 import type { WeatherResponse } from "../../entities/weather/types";
 
-const cities = ["Дыня", "Арбуз", "Пряник", "Ананас", "Стекло", "Яблоко"];
+const cities = ["Moscow", "Murmansk", "Berlin", "Paris"];
 
-export const WeatherSearch = () => {
+interface WeatherSearchProps {
+  onWeatherLoaded?: (weather: WeatherResponse) => void;
+}
+
+export const WeatherSearch = ({ onWeatherLoaded }: WeatherSearchProps) => {
   const [value, setValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [weather, setWeather] = useState<WeatherResponse | null>(null);
 
   const handleOptionSubmit = (value: string) => {
     setValue(value);
@@ -29,8 +32,11 @@ export const WeatherSearch = () => {
     try {
       const result = await getWeatherResponse(searchValue);
       console.log(result);
-      setWeather(result);
-    } catch (err) {
+      
+      if (onWeatherLoaded) {
+        onWeatherLoaded(result);
+      }
+    } catch (err: any) {
       setError(err.message);
       console.error("Ошибка получения погоды:", err);
     } finally {
@@ -67,14 +73,6 @@ export const WeatherSearch = () => {
           dropdown: classes.customDropdown,
         }}
       />
-      {weather && (
-        <div>
-          <h3>Погода в {weather.city}</h3>
-          <p>Температура: {weather.temperatureCelsius} C</p>
-          <p>Ветер: {weather.windSpeed} км/ч</p>
-          <p>Наблюдается: {weather.observedAt}</p>
-        </div>
-      )}
     </form>
   );
 };

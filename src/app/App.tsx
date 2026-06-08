@@ -1,12 +1,12 @@
 import { MantineProvider } from '@mantine/core'
 import '@mantine/core/styles.css';
-import { WeatherSearch } from '../features/weather-search/WeatherSearch'
+import { WeatherPage } from '../pages/weather/WeatherPage';
 
 function App() {
 
   return (
     <MantineProvider>
-      <WeatherSearch/>
+      <WeatherPage/>
     </MantineProvider>
   )
 }
