@@ -1,4 +1,4 @@
-import { Autocomplete } from "@mantine/core";
+import { Autocomplete, Button } from "@mantine/core";
 import React, { forwardRef, useImperativeHandle, useState } from "react";
 import classes from "./WeatherSearch.module.css";
 import { getWeatherResponse } from "../../entities/weather/weatherApi";
@@ -47,7 +47,9 @@ export const WeatherSearch = forwardRef<
         if (onWeatherLoaded) {
           onWeatherLoaded(result);
           const newCities = [searchValue, ...citiesHistory];
-          const filteredCities = newCities.filter((elem, index) => elem !== newCities[index - 1]);
+          const filteredCities = newCities.filter(
+            (elem, index) => elem !== newCities[index - 1],
+          );
           setCitiesHistory(filteredCities);
         }
       } catch (err: any) {
@@ -84,7 +86,17 @@ export const WeatherSearch = forwardRef<
           limit={5}
           data={cities}
           loading={isLoading}
-          clearable
+          rightSection={
+            <Button
+              variant="subtle"
+              size="compact-xs"
+              onClick={() => handleWeatherSearch(value)}
+              disabled={!value.trim()}
+            >
+              Поиск
+            </Button>
+          }
+          rightSectionWidth="auto"
           error={error}
           classNames={{
             option: classes.customOption,
