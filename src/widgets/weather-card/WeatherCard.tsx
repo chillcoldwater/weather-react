@@ -44,7 +44,7 @@ export const WeatherCard: React.FC<WeatherCardProps> = ({
           <div className={classes.detailItem}>
             <span className={classes.detailLabel}>Обновлено:</span>
             <span className={classes.detailValue}>
-              {formatTime(weather.observedAt)}
+              {formatTime(weather.observedAt)} по UTC
             </span>
           </div>
 

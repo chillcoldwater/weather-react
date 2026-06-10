@@ -1,0 +1,18 @@
+.historyContainer {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 3%;
+}
+
+.buttonStyle {
+    background: linear-gradient(135deg, #667eea 0%, #5070da 100%);
+    border-radius: 20px;
+    margin: 0.3rem;
+    width: 10rem;
+    color: white;
+}
+
+.buttonStyle:hover {
+    transform: translateY(-0.05rem) scale(1.01);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+}

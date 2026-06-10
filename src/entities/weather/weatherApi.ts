@@ -30,12 +30,15 @@ export async function getPositionByCity(city: string): Promise<CityResponse> {
     throw new Error(`Город "${city}" не найден`);
   }
   const firstResult = geoData.results[0];
+  if (firstResult.name.toLowerCase() != city.toLowerCase()) {
+    throw new Error(`Город ${city} не найден. Возможно вы имели ввиду ${firstResult.name}, попробуйте ещё раз.`)
+  }
   const cityResponse: CityResponse = {
     city: firstResult.name,
     latitude: firstResult.latitude,
     longitude: firstResult.longitude,
   };
-
+  
   const finalValidation = CityResponseSchema.safeParse(cityResponse);
   if (!finalValidation.success) {
     throw new Error("Ошибка формирования данных о городе");
@@ -67,7 +70,7 @@ export async function getWeatherResponse(
   );
   const rawData = await response.json();
   try {
-    const weatherResponse = mapToWeatherResponse(rawData, city);
+    const weatherResponse = mapToWeatherResponse(rawData, cityPos.city);
     const finalValidation = WeatherResponseSchema.safeParse(weatherResponse);
     if (!finalValidation.success) {
       throw new Error("Ошибка формирования погодных данных");
