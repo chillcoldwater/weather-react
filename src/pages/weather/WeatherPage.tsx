@@ -1,43 +1,58 @@
-// WeatherPage.tsx
+// WeatherPage.tsx - ЕДИНСТВЕННЫЙ useQuery
+import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
 import { WeatherSearch } from "../../features/weather-search/WeatherSearch";
 import { WeatherCard } from "../../widgets/weather-card/WeatherCard";
-import { useState, useRef } from "react";
-import type { WeatherResponse } from "../../entities/weather/types";
 import { WeatherHistory } from "../../features/history/WeatherHistory";
-
-type PageState = 'initial' | 'loading' | 'success' | 'empty' | 'error';
+import { weatherQueries } from '../../shared/api/weatherQueries';
 
 export const WeatherPage = () => {
-  const [weather, setWeather] = useState<WeatherResponse | null>(null);
+  const [currentCity, setCurrentCity] = useState<string>('');
   const [citiesHistory, setCitiesHistory] = useState<string[]>([]);
-  const [pageState, setPageState] = useState<PageState>('initial');
-  const searchRef = useRef<{ triggerSearch: () => void; getCurrentCity: () => string; setCity: (city : string) => void } | null>(null);
 
-  const handleWeatherLoaded = (data: WeatherResponse) => {
-    setWeather(data);
-    setPageState('success');
+  const { 
+    data: weather, 
+    isLoading, 
+    error, 
+    refetch 
+  } = useQuery(weatherQueries.byCity(currentCity))
+
+  const handleSearch = (city: string) => {
+    setCurrentCity(city);
+    setTimeout(()=>refetch(), 0);
   };
 
-  const handleCityChosen = (city: string) => {
-    searchRef.current?.setCity(city)
-    searchRef.current?.triggerSearch();
-  };
+  useEffect(() => {
+    if (weather && currentCity) {
+      setCitiesHistory(prev => [currentCity, ...prev.filter(c => c !== currentCity)]);
+    }
+  }, [weather, currentCity]);
+
+  let pageState: 'initial' | 'loading' | 'success' | 'empty' | 'error' = 'initial';
+  
+  if (isLoading) pageState = 'loading';
+  else if (error) pageState = 'error';
+  else if (weather) pageState = 'success';
+  else if (currentCity) pageState = 'empty';
+  else pageState = 'initial';
 
   return (
     <div>
-      <WeatherSearch
-        ref={searchRef}
-        onWeatherLoaded={handleWeatherLoaded}
-        citiesHistory={citiesHistory}
-        setCitiesHistory={setCitiesHistory}
+      <WeatherSearch 
+        onSearch={handleSearch}
+        isLoading={isLoading}
       />
-
       <WeatherHistory
-        onChosen={handleCityChosen}
+        onChosen={(city) => handleSearch(city)}
         citiesHistory={citiesHistory}
       />
+      {pageState === 'loading' && <div>Загрузка погоды...</div>}
+      {pageState === 'error' && <div>Ошибка: {error?.message}</div>}
+      {pageState === 'empty' && <div>Город "{currentCity}" не найден</div>}
+      {pageState === 'success' && weather && (
+        <WeatherCard weather={weather} />
+      )}
       
-      {weather && <WeatherCard weather={weather} />}
     </div>
   );
 };
