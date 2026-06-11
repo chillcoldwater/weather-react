@@ -1,0 +1,21 @@
+.customDropdown {
+    background: linear-gradient(135deg, #66afea 0%, #764ba2 100%);
+    border-radius: 15px;
+}
+
+.customOption {
+    transition: all 0.1s ease;
+    background: linear-gradient(135deg, #66afea 0%, #764ba2 100%);
+}
+
+/* Стили для кнопки */
+.searchContainer button {
+  background: #007bff;
+  color: white;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.searchContainer button:hover {
+  background: #0056b3;
+}
