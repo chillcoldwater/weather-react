@@ -1,109 +1,133 @@
 import { Autocomplete, Button } from "@mantine/core";
-import React, { forwardRef, useImperativeHandle, useState } from "react";
+import React, { forwardRef, useImperativeHandle } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import classes from "./WeatherSearch.module.css";
 import { getWeatherResponse } from "../../entities/weather/weatherApi";
 import type { WeatherResponse } from "../../entities/weather/types";
 
 const cities = ["Moscow", "Murmansk", "Berlin", "Paris"];
 
+const weatherSchema = z.object({
+  city: z
+    .string()
+    .min(2, "Название города должно содержать минимум 2 символа")
+});
+
+type WeatherFormData = z.infer<typeof weatherSchema>;
+
 interface WeatherSearchProps {
   onWeatherLoaded?: (weather: WeatherResponse) => void;
-  value: string;
-  setValue: (value: string) => void;
   citiesHistory: string[];
-  setCitiesHistory: (arr: string[]) => void;
+  setCitiesHistory: (arr: string[] | ((prev: string[]) => string[])) => void;
 }
 
-/* Использовал forwardRef для того чтобы не выносить логику поиска на WeatherPage, а вызывать нужную функцию через ссылку */
 export const WeatherSearch = forwardRef<
-  { triggerSearch: () => void },
+  { triggerSearch: () => void; getCurrentCity: () => string; setCity: (city : string) => void },
   WeatherSearchProps
->(
-  (
-    { onWeatherLoaded, value, setValue, citiesHistory, setCitiesHistory },
-    ref,
-  ) => {
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+>(({ onWeatherLoaded, citiesHistory, setCitiesHistory }, ref) => {
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isSubmitting, isValid },
+    setValue,
+    getValues,
+    setError,
+    clearErrors,
+  } = useForm<WeatherFormData>({
+    resolver: zodResolver(weatherSchema),
+    defaultValues: {
+      city: "",
+    },
+    mode: "onChange",
+  });
 
-    const handleOptionSubmit = (value: string) => {
-      setValue(value);
-      handleWeatherSearch(value);
-    };
+  const performWeatherSearch = async (searchValue: string) => {
+    if (!searchValue.trim()) return;
 
-    const handleWeatherSearch = async (searchValue: string) => {
-      if (searchValue.trim().length < 2) {
-        setError("Название города должно содержать минимум 2 символа");
-        return;
+    try {
+      const result = await getWeatherResponse(searchValue);
+
+      if (onWeatherLoaded) {
+        onWeatherLoaded(result);
+        
+        setCitiesHistory((prev: string[]) => {
+          const newCities = [searchValue, ...prev];
+          return newCities.filter((city, index) => city !== newCities[index + 1]);
+        });
       }
+    } catch (err: any) {
+      console.error("Ошибка получения погоды:", err);
+      
+      setError("city", {
+        type: "manual",
+        message: err.message || "Не удалось найти город. Проверьте название или попробуйте позже.",
+      });
+    }
+  };
 
-      setIsLoading(true);
-      setError("");
+  const onSubmit = async (data: WeatherFormData) => {
+    // Очищаем ошибку перед новым запросом
+    clearErrors("city");
+    
+    try {
+      await performWeatherSearch(data.city);
+    } catch (error) {
+      console.error("Submit failed:", error);
+    }
+  };
 
-      try {
-        const result = await getWeatherResponse(searchValue);
-        console.log(result);
+  const handleOptionSubmit = (selectedCity: string) => {
+    setValue("city", selectedCity);
+    handleSubmit(onSubmit)();
+  };
 
-        if (onWeatherLoaded) {
-          onWeatherLoaded(result);
-          const newCities = [searchValue, ...citiesHistory];
-          const filteredCities = newCities.filter(
-            (elem, index) => elem !== newCities[index - 1],
-          );
-          setCitiesHistory(filteredCities);
-        }
-      } catch (err: any) {
-        setError(err.message);
-        console.error("Ошибка получения погоды:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  useImperativeHandle(ref, () => ({
+    triggerSearch: () => {
+      handleSubmit(onSubmit)();
+    },
+    getCurrentCity: () => {
+      return getValues("city");
+    },
+    setCity: (city : string) => {
+      setValue("city", city)
+    }
+  }));
 
-    useImperativeHandle(ref, () => ({
-      triggerSearch: () => {
-        handleWeatherSearch(value);
-      },
-    }));
-    const handleSubmit = (event: React.SubmitEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      handleWeatherSearch(value);
-    };
-
-    const handleChange = (newValue: string) => {
-      setValue(newValue);
-      setError("");
-    };
-
-    return (
-      <form onSubmit={handleSubmit}>
-        <Autocomplete
-          label="Город"
-          placeholder="Введите название..."
-          value={value}
-          onChange={handleChange}
-          onOptionSubmit={handleOptionSubmit}
-          limit={5}
-          data={cities}
-          loading={isLoading}
-          rightSection={
-            <Button
-              variant="subtle"
-              size="compact-xs"
-              onClick={() => handleWeatherSearch(value)}
-              disabled={!value.trim()}
-            >
-              Поиск
-            </Button>
-          }
-          rightSectionWidth="auto"
-          error={error}
-          classNames={{
-            option: classes.customOption,
-            dropdown: classes.customDropdown,
-          }}
-        />
-      </form>
-    );
-  },
-);
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <Controller
+        name="city"
+        control={control}
+        render={({ field }) => (
+          <Autocomplete
+            {...field}
+            label="Город"
+            placeholder="Введите название..."
+            limit={5}
+            data={cities}
+            loading={isSubmitting}
+            onOptionSubmit={handleOptionSubmit}
+            rightSection={
+              <Button
+                variant="subtle"
+                size="compact-xs"
+                type="submit"
+                disabled={!field.value?.trim() || !isValid || isSubmitting}
+              >
+                Поиск
+              </Button>
+            }
+            rightSectionWidth="auto"
+            error={errors.city?.message}
+            classNames={{
+              option: classes.customOption,
+              dropdown: classes.customDropdown,
+            }}
+          />
+        )}
+      />
+    </form>
+  );
+});
