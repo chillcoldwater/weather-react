@@ -58,6 +58,7 @@ export const WeatherSearch = ({ onSearch, isLoading }: WeatherSearchProps) => {
           <Autocomplete
             {...field}
             onChange={(value) => handleChange(value, field.onChange)}
+            data-testid="city-search-input"
             label="Город"
             placeholder="Введите название..."
             limit={5}
